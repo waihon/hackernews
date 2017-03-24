@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, PropTypes } from 'react';
 import './App.css';
 
 // Fetching data
@@ -20,7 +20,7 @@ class App extends Component {
     this.state = {
       results: null,
       searchKey: "", // key to refer cache of previous results
-      searchTerm: DEFAULT_QUERY
+      searchTerm: DEFAULT_QUERY,
     };
 
     // Binding of class methods
@@ -62,7 +62,7 @@ class App extends Component {
         // page is is shorthand property. This syntax can be used when
         // both the property and value have the same name.
         [searchKey]: { hits: updatedHits, page }
-      }
+      },
     });
   }
 
@@ -75,7 +75,8 @@ class App extends Component {
       // res and rst also.
       .then(response => response.json())
       // result contains the content returned by response.json()
-      .then(result => this.setSearchTopstories(result));
+      .then(result => this.setSearchTopstories(result))
+      .catch(error => error);
   }
 
   componentDidMount() {
@@ -166,9 +167,8 @@ class App extends Component {
 // Converting an ES6 class component to a functional stateless component:
 // 1. Replace "class ClassName extends Component" with "function ClassName(props)"
 // 2. Best practice - destructure the props in the function signature
-// 3. Remove "render()"
+// 3. Remove "render()" and return statement
 const Search = ({ value, onChange, onSubmit, children }) =>
-  // A concise body wihout curly braces nor return statement (implicit)
   <form onSubmit={onSubmit}>
     <input
       type="text"
@@ -180,6 +180,17 @@ const Search = ({ value, onChange, onSubmit, children }) =>
     </button>
   </form>
 
+Search.propTypes = {
+  value: PropTypes.string.isRequired,
+  onChange: PropTypes.func.isRequired,
+  onSubmit: PropTypes.func.isRequired,
+  children: PropTypes.node.isRequired
+}
+
+// Converting an ES6 class component to a functional stateless component:
+// 1. Replace "class ClassName extends Component" with "function ClassName(props)"
+// 2. Best practice - destructure the props in the function signature
+// 3. Remove "render()"
 const Table = ({ list, onDismiss }) => {
   const largeColumn = { width: "40%" };
   const midColumn = { width: "30%" };
@@ -213,10 +224,24 @@ const Table = ({ list, onDismiss }) => {
       )}
     </div>
   );
-}
+};
 
-// Using default parameter to indicate className is optional
-const Button = ({ onClick, className = "", children }) =>
+Table.propTypes = {
+  //list: PropTypes.array.isRequired,
+  list: PropTypes.arrayOf(
+    PropTypes.shape({
+      objectID: PropTypes.string.isRequired,
+      author: PropTypes.string,
+      url: PropTypes.string,
+      num_comments: PropTypes.number,
+      points: PropTypes.number
+    })
+  ).isRequired,
+  onDismiss: PropTypes.func.isRequired
+};
+
+const Button = ({ onClick, className, children }) =>
+  // A concise body wihout curly braces nor return statement (implicit)
   <button
     onClick={onClick}
     className={className}
@@ -225,4 +250,21 @@ const Button = ({ onClick, className = "", children }) =>
     {children}
   </button>
 
+Button.defaultProps = {
+  className: ""
+};
+
+// PropType type check happens after the default prop is evaluated.
+Button.propTypes = {
+  onClick: PropTypes.func.isRequired,
+  className: PropTypes.string,
+  children: PropTypes.node.isRequired
+};
+
 export default App;
+
+export {
+  Button,
+  Search,
+  Table
+};
