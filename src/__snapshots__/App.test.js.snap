@@ -16,13 +16,85 @@ exports[`App snapshot 1`] = `
     </form>
   </div>
   <div
+    className="table">
+    <div
+      className="table-header">
+      <span
+        style={
+          Object {
+            "width": "40%",
+          }
+        }>
+        <button
+          className="button-inline"
+          onClick={[Function]}
+          type="button">
+          Title
+           
+          <span />
+        </button>
+      </span>
+      <span
+        style={
+          Object {
+            "width": "30%",
+          }
+        }>
+        <button
+          className="button-inline"
+          onClick={[Function]}
+          type="button">
+          Author
+           
+          <span />
+        </button>
+      </span>
+      <span
+        style={
+          Object {
+            "width": "10%",
+          }
+        }>
+        <button
+          className="button-inline"
+          onClick={[Function]}
+          type="button">
+          Comments
+           
+          <span />
+        </button>
+      </span>
+      <span
+        style={
+          Object {
+            "width": "10%",
+          }
+        }>
+        <button
+          className="button-inline"
+          onClick={[Function]}
+          type="button">
+          Points
+           
+          <span />
+        </button>
+      </span>
+      <span
+        style={
+          Object {
+            "width": "10%",
+          }
+        }>
+        Archive
+      </span>
+    </div>
+  </div>
+  <div
     className="interactions">
-    <button
-      className=""
-      onClick={[Function]}
-      type="button">
-      More
-    </button>
+    <div>
+      <i
+        className="fa fa-refresh fa-spin fa-2x fa-fw" />
+    </div>
   </div>
 </div>
 `;
@@ -50,9 +122,92 @@ exports[`Search snapshots 1`] = `
 </form>
 `;
 
+exports[`Sort snapshots 1`] = `
+<button
+  className="button-inline button-active"
+  onClick={[Function]}
+  type="button">
+   
+  <i
+    className="fa fa-caret-up" />
+</button>
+`;
+
 exports[`Table snapshots 1`] = `
 <div
   className="table">
+  <div
+    className="table-header">
+    <span
+      style={
+        Object {
+          "width": "40%",
+        }
+      }>
+      <button
+        className="button-inline button-active"
+        onClick={[Function]}
+        type="button">
+        Title
+         
+        <i
+          className="fa fa-caret-up" />
+      </button>
+    </span>
+    <span
+      style={
+        Object {
+          "width": "30%",
+        }
+      }>
+      <button
+        className="button-inline"
+        onClick={[Function]}
+        type="button">
+        Author
+         
+        <span />
+      </button>
+    </span>
+    <span
+      style={
+        Object {
+          "width": "10%",
+        }
+      }>
+      <button
+        className="button-inline"
+        onClick={[Function]}
+        type="button">
+        Comments
+         
+        <span />
+      </button>
+    </span>
+    <span
+      style={
+        Object {
+          "width": "10%",
+        }
+      }>
+      <button
+        className="button-inline"
+        onClick={[Function]}
+        type="button">
+        Points
+         
+        <span />
+      </button>
+    </span>
+    <span
+      style={
+        Object {
+          "width": "10%",
+        }
+      }>
+      Archive
+    </span>
+  </div>
   <div
     className="table-row">
     <span

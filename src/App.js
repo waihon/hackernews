@@ -1,4 +1,6 @@
 import React, { Component, PropTypes } from 'react';
+import { sortBy } from "lodash";
+import classNames from "classnames";
 import './App.css';
 
 // Fetching data
@@ -11,7 +13,16 @@ const PATH_BASE = "https://hn.algolia.com/api/v1";
 const PATH_SEARCH = "/search";
 const PARAM_SEARCH = "query=";
 const PARAM_PAGE = "page=";
-const PARAM_HPP = "hitsPerPage="
+const PARAM_HPP = "hitsPerPage=";
+
+// Sort function by sort key
+const SORTS = {
+  NONE: list => list,
+  TITLE: list => sortBy(list, "title"),
+  AUTHOR: list => sortBy(list, "author"),
+  COMMENTS: list => sortBy(list, "num_comments").reverse(), // descending
+  POINTS: list=> sortBy(list, "points").reverse() // descending
+}
 
 class App extends Component {
   constructor(props) {
@@ -21,6 +32,9 @@ class App extends Component {
       results: null,
       searchKey: "", // key to refer cache of previous results
       searchTerm: DEFAULT_QUERY,
+      isLoading: false,
+      sortKey: "NONE",
+      isSortReverse: false
     };
 
     // Binding of class methods
@@ -30,6 +44,14 @@ class App extends Component {
     this.onSearchChange = this.onSearchChange.bind(this);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.onDismiss = this.onDismiss.bind(this);
+    this.onSort = this.onSort.bind(this);
+  }
+
+  onSort(sortKey) {
+    // When sortKey in the state is the same as the incoming sortKey
+    // and the revsrse state is not lready set to true
+    const isSortReverse = this.state.sortKey === sortKey && !this.state.isSortReverse;
+    this.setState({ sortKey, isSortReverse });
   }
 
   needsToSearchTopstories(searchTerm) {
@@ -63,10 +85,12 @@ class App extends Component {
         // both the property and value have the same name.
         [searchKey]: { hits: updatedHits, page }
       },
+      isLoading: false
     });
   }
 
   fetchSearchTopstories(searchTerm, page) {
+    this.setState({ isLoading: true });
     // https://hn.algolia.com/api/v1/search?query=redux&page=0&hitsPerPage=10
     fetch(`${PATH_BASE}${PATH_SEARCH}?${PARAM_SEARCH}${searchTerm}&${PARAM_PAGE}${page}&${PARAM_HPP}${DEFAULT_HPP}`)
       // The response needs to get transformed to JSON, which is a
@@ -123,7 +147,9 @@ class App extends Component {
 
   render() {
     // ES6 destructuring
-    const { searchTerm, results, searchKey } = this.state;
+    const {
+      searchTerm, results, searchKey, isLoading, sortKey, isSortReverse
+    } = this.state;
 
     const page = (
       results &&
@@ -148,37 +174,61 @@ class App extends Component {
             Search
           </Search>
         </div>
-        { results &&
-          <Table
-            list={list}
-            onDismiss={this.onDismiss}
-          />
-        }
+        <Table
+          list={list}
+          sortKey={sortKey}
+          isSortReverse={isSortReverse}
+          onSort={this.onSort}
+          onDismiss={this.onDismiss}
+        />
         <div className="interactions">
-          <Button onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
+          <ButtonWithLoading
+            isLoading={isLoading}
+            onClick={() => this.fetchSearchTopstories(searchKey, page + 1)}>
             More
-          </Button>
+          </ButtonWithLoading>
         </div>
       </div>
     );
   }
 }
 
-// Converting an ES6 class component to a functional stateless component:
-// 1. Replace "class ClassName extends Component" with "function ClassName(props)"
-// 2. Best practice - destructure the props in the function signature
-// 3. Remove "render()" and return statement
-const Search = ({ value, onChange, onSubmit, children }) =>
-  <form onSubmit={onSubmit}>
-    <input
-      type="text"
-      value={value}
-      onChange={onChange}
-    />
-    <button type="submit">
-      {children}
-    </button>
-  </form>
+// Converting a functional stateless component to an ES6 class component
+// 1. Replace "function ClassName(props)" with "class ClassName extends Component"
+// 2. Include "render()" and "return" statement
+// 3. Best practice - destructure the props in render()
+class Search extends Component {
+  componentDidMount() {
+    // Workaround to avoid "TypeError: Cannot read property 'focus' of null"
+    // when running test.
+    // http://stackoverflow.com/questions/37539217/typeerror-when-using-focus
+    if (this.input) {
+      this.input.focus();
+    }
+  }
+
+  render() {
+    const {
+      value, onChange, onSubmit, children
+    } = this.props;
+
+    return (
+      <form onSubmit={onSubmit}>
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          // The this object of an ES6 class component helps us
+          // to reference the DOM node with the ref attribute.
+          ref={(node) => { this.input = node; }}
+        />
+        <button type="submit">
+          {children}
+        </button>
+      </form>
+    );
+  }
+}
 
 Search.propTypes = {
   value: PropTypes.string.isRequired,
@@ -191,14 +241,48 @@ Search.propTypes = {
 // 1. Replace "class ClassName extends Component" with "function ClassName(props)"
 // 2. Best practice - destructure the props in the function signature
 // 3. Remove "render()"
-const Table = ({ list, onDismiss }) => {
+const Table = ({ list, sortKey, isSortReverse, onSort, onDismiss }) => {
   const largeColumn = { width: "40%" };
   const midColumn = { width: "30%" };
   const smallColumn = { width: "10%" };
 
+  const sortedList = SORTS[sortKey](list);
+  const reverseSortedList = isSortReverse
+    ? sortedList.reverse()
+    : sortedList;
+
   return (
     <div className="table">
-      { list.map(item =>
+      <div className="table-header">
+        <span style={largeColumn}>
+          <Sort sortKey={"TITLE"} onSort={onSort}
+            activeSortKey={sortKey} isSortReverse={isSortReverse}>
+            Title
+          </Sort>
+        </span>
+        <span style={midColumn}>
+          <Sort sortKey={"AUTHOR"} onSort={onSort}
+            activeSortKey={sortKey} isSortReverse={isSortReverse}>
+            Author
+          </Sort>
+        </span>
+        <span style={smallColumn}>
+          <Sort sortKey={"COMMENTS"} onSort={onSort}
+            activeSortKey={sortKey} isSortReverse={isSortReverse}>
+            Comments
+          </Sort>
+        </span>
+        <span style={smallColumn}>
+          <Sort sortKey={"POINTS"} onSort={onSort}
+            activeSortKey={sortKey} isSortReverse={isSortReverse}>
+            Points
+          </Sort>
+        </span>
+        <span style={smallColumn}>
+          Archive
+        </span>
+      </div>
+      { reverseSortedList.map(item =>
         <div key={item.objectID} className="table-row">
           <span style={largeColumn}>
             <a href={item.url}>{item.title}</a>
@@ -237,6 +321,9 @@ Table.propTypes = {
       points: PropTypes.number
     })
   ).isRequired,
+  sortKey: PropTypes.string.isRequired,
+  isSortReverse: PropTypes.bool.isRequired,
+  onSort: PropTypes.func.isRequired,
   onDismiss: PropTypes.func.isRequired
 };
 
@@ -261,10 +348,51 @@ Button.propTypes = {
   children: PropTypes.node.isRequired
 };
 
+const Loading = () =>
+  <div><i className="fa fa-refresh fa-spin fa-2x fa-fw"></i></div>
+
+// Use ES6 rest destructuring to avoid passing isLoading to the input component.
+const withLoading = (Component) => ({ isLoading, ...rest }) =>
+  isLoading ? <Loading /> : <Component { ...rest } />
+
+const ButtonWithLoading = withLoading(Button);
+
+const Sort = ({ sortKey, activeSortKey, isSortReverse, onSort, children }) => {
+  const sortClass = classNames(
+    "button-inline",
+    { "button-active": sortKey === activeSortKey }
+  );
+
+  return (
+    <Button
+      onClick={() => onSort(sortKey)}
+      // Convert sortClass's array elements to a string delimited by s space
+      className={sortClass}
+    >
+      {children}&nbsp;
+      {
+        sortKey === activeSortKey
+          ? isSortReverse
+            ? <i className="fa fa-caret-down"></i>
+            : <i className="fa fa-caret-up"></i>
+          : <span></span>
+      }
+    </Button>
+  );
+};
+
+Sort.propTypes = {
+  sortKey: PropTypes.string.isRequired,
+  activeSortKey: PropTypes.string.isRequired,
+  isSortReverse: PropTypes.bool.isRequired,
+  onSort: PropTypes.func.isRequired
+};
+
 export default App;
 
 export {
   Button,
   Search,
-  Table
+  Table,
+  Sort
 };

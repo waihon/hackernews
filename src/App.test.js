@@ -2,7 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom";
 import renderer from "react-test-renderer";
 import { shallow } from "enzyme";
-import App, { Search, Button, Table } from "./App";
+import App, { Search, Button, Table, Sort } from "./App";
 
 describe("App", () => {
   it("renders", () => {
@@ -66,7 +66,10 @@ describe("Table", () => {
       { title: "1", author: "1", num_comments: 1, points: 2, objectID: "y" },
       { title: "2", author: "2", num_comments: 1, points: 2, objectID: "z" }
     ],
-    onDismiss: handler
+    sortKey: "TITLE",
+    isSortReverse: false,
+    onSort: handler,
+    onDismiss: handler,
   }
 
   it("renders", () => {
@@ -87,5 +90,29 @@ describe("Table", () => {
       <Table { ...props } />
     );
     expect(element.find(".table-row").length).toBe(2);
+  });
+});
+
+describe("Sort", () => {
+  const handler = (event) => { };
+  const props = {
+    sortKey: "key",
+    activeSortKey: "key",
+    isSortReverse: false,
+    onSort: handler
+  }
+
+  it("renders", () => {
+    const div = document.createElement("div");
+    ReactDOM.render(<Sort { ...props } />, div)
+  });
+
+  test("snapshots", () => {
+    const component = renderer.create(
+      <Sort { ...props } />
+    );
+    let tree = component.toJSON();
+
+    expect(tree).toMatchSnapshot();
   });
 });
