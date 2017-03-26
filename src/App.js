@@ -24,6 +24,32 @@ const SORTS = {
   POINTS: list=> sortBy(list, "points").reverse() // descending
 }
 
+const updateSearchTopstoriesState = (hits, page) => (prevState) => {
+  // results contains previous results cached by searchKey
+  const { searchKey, results } = prevState;
+
+  const oldHits = results && results[searchKey]
+    ? results[searchKey].hits
+    : [];
+
+  const updatedHits = [
+    ...oldHits,
+    ...hits
+  ];
+
+  // If the searchKey already exists in results then the existing content
+  // will be refreshed with the latest content.
+  return {
+    results: {
+      ...results,
+      // [searchKey] is a computed property name.
+      // page is is shorthand property (its value have the same name).
+      [searchKey]: { hits: updatedHits, page }
+    },
+    isLoading: false
+  };
+};
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -32,9 +58,7 @@ class App extends Component {
       results: null,
       searchKey: "", // key to refer cache of previous results
       searchTerm: DEFAULT_QUERY,
-      isLoading: false,
-      sortKey: "NONE",
-      isSortReverse: false
+      isLoading: false
     };
 
     // Binding of class methods
@@ -44,14 +68,6 @@ class App extends Component {
     this.onSearchChange = this.onSearchChange.bind(this);
     this.onSearchSubmit = this.onSearchSubmit.bind(this);
     this.onDismiss = this.onDismiss.bind(this);
-    this.onSort = this.onSort.bind(this);
-  }
-
-  onSort(sortKey) {
-    // When sortKey in the state is the same as the incoming sortKey
-    // and the revsrse state is not lready set to true
-    const isSortReverse = this.state.sortKey === sortKey && !this.state.isSortReverse;
-    this.setState({ sortKey, isSortReverse });
   }
 
   needsToSearchTopstories(searchTerm) {
@@ -63,30 +79,7 @@ class App extends Component {
     // result is an object returned by the API which contains objectID,
     // hits (array), page, hitsPerPage, nbHits, and so on.
     const { hits, page } = result;
-    // results contains previous results cached by searchKey
-    const { searchKey, results } = this.state;
-
-    const oldHits = results && results[searchKey]
-      ? results[searchKey].hits
-      : [];
-
-    const updatedHits = [
-      ...oldHits,
-      ...hits
-    ];
-
-    // If the searchKey already exists in results then the existing content
-    // will be refreshed with the latest content.
-    this.setState({
-      results: {
-        ...results,
-        // [searchKey] is a computed property name.
-        // page is is shorthand property. This syntax can be used when
-        // both the property and value have the same name.
-        [searchKey]: { hits: updatedHits, page }
-      },
-      isLoading: false
-    });
+    this.setState(updateSearchTopstoriesState(hits, page));
   }
 
   fetchSearchTopstories(searchTerm, page) {
@@ -110,21 +103,23 @@ class App extends Component {
   }
 
   onDismiss(id) {
-    const { searchKey, results } = this.state
-    const { hits, page } = results[searchKey];
+    this.setState(prevState => {
+      const { searchKey, results } = prevState
+      const { hits, page } = results[searchKey];
 
-    // This filtering function includes those items NOT having the
-    // desired ID.
-    const isNotId = item => item.objectID !== id;
-    const updatedHits = hits.filter(isNotId);
+      // This filtering function includes those items NOT having the
+      // desired ID.
+      const isNotId = item => item.objectID !== id;
+      const updatedHits = hits.filter(isNotId);
 
-    // If the searchKey already exists in results then the existing content
-    // will be refreshed with the latest content.
-    this.setState({
-      results: {
-        ...results,
-        [searchKey]: { hits: updatedHits, page }
-      }
+      // If the searchKey already exists in results then the existing content
+      // will be refreshed with the latest content.
+      return {
+        results: {
+          ...results,
+          [searchKey]: { hits: updatedHits, page }
+        }
+      };
     });
   }
 
@@ -148,7 +143,7 @@ class App extends Component {
   render() {
     // ES6 destructuring
     const {
-      searchTerm, results, searchKey, isLoading, sortKey, isSortReverse
+      searchTerm, results, searchKey, isLoading
     } = this.state;
 
     const page = (
@@ -176,9 +171,6 @@ class App extends Component {
         </div>
         <Table
           list={list}
-          sortKey={sortKey}
-          isSortReverse={isSortReverse}
-          onSort={this.onSort}
           onDismiss={this.onDismiss}
         />
         <div className="interactions">
@@ -237,78 +229,112 @@ Search.propTypes = {
   children: PropTypes.node.isRequired
 }
 
-// Converting an ES6 class component to a functional stateless component:
-// 1. Replace "class ClassName extends Component" with "function ClassName(props)"
-// 2. Best practice - destructure the props in the function signature
-// 3. Remove "render()"
-const Table = ({ list, sortKey, isSortReverse, onSort, onDismiss }) => {
-  const largeColumn = { width: "40%" };
-  const midColumn = { width: "30%" };
-  const smallColumn = { width: "10%" };
+// Converting a functional stateless component to an ES6 class component
+// 1. Replace "function ClassName(props)" with "class ClassName extends Component"
+// 2. Include "render()" and "return" statement
+// 3. Best practice - destructure the props in render()
+class Table extends Component {
+  constructor(props) {
+    super(props);
 
-  const sortedList = SORTS[sortKey](list);
-  const reverseSortedList = isSortReverse
-    ? sortedList.reverse()
-    : sortedList;
+    this.state = {
+      sortKey: "NONE",
+      isSortReverse: false
+    };
 
-  return (
-    <div className="table">
-      <div className="table-header">
-        <span style={largeColumn}>
-          <Sort sortKey={"TITLE"} onSort={onSort}
-            activeSortKey={sortKey} isSortReverse={isSortReverse}>
-            Title
-          </Sort>
-        </span>
-        <span style={midColumn}>
-          <Sort sortKey={"AUTHOR"} onSort={onSort}
-            activeSortKey={sortKey} isSortReverse={isSortReverse}>
-            Author
-          </Sort>
-        </span>
-        <span style={smallColumn}>
-          <Sort sortKey={"COMMENTS"} onSort={onSort}
-            activeSortKey={sortKey} isSortReverse={isSortReverse}>
-            Comments
-          </Sort>
-        </span>
-        <span style={smallColumn}>
-          <Sort sortKey={"POINTS"} onSort={onSort}
-            activeSortKey={sortKey} isSortReverse={isSortReverse}>
-            Points
-          </Sort>
-        </span>
-        <span style={smallColumn}>
-          Archive
-        </span>
-      </div>
-      { reverseSortedList.map(item =>
-        <div key={item.objectID} className="table-row">
+    this.onSort = this.onSort.bind(this);
+  }
+
+  onSort(sortKey) {
+    this.setState(prevState => {
+      // When sortKey in the state is the same as the incoming sortKey
+      // and the revsrse state is not lready set to true
+      const isSortReverse = prevState.sortKey === sortKey && !prevState.isSortReverse;
+      return {
+        // Shorthand properties
+        sortKey,
+        isSortReverse
+      };
+    });
+  }
+
+  render() {
+    const {
+      list, onDismiss
+    } = this.props;
+
+    const {
+      sortKey, isSortReverse
+    } = this.state;
+
+    const largeColumn = { width: "40%" };
+    const midColumn = { width: "30%" };
+    const smallColumn = { width: "10%" };
+
+    const sortedList = SORTS[sortKey](list);
+    const reverseSortedList = isSortReverse
+      ? sortedList.reverse()
+      : sortedList;
+
+    return (
+      <div className="table">
+        <div className="table-header">
           <span style={largeColumn}>
-            <a href={item.url}>{item.title}</a>
+            <Sort sortKey={"TITLE"} onSort={this.onSort}
+              activeSortKey={sortKey} isSortReverse={isSortReverse}>
+              Title
+            </Sort>
           </span>
           <span style={midColumn}>
-            {item.author}
+            <Sort sortKey={"AUTHOR"} onSort={this.onSort}
+              activeSortKey={sortKey} isSortReverse={isSortReverse}>
+              Author
+            </Sort>
           </span>
           <span style={smallColumn}>
-            {item.num_comments}
+            <Sort sortKey={"COMMENTS"} onSort={this.onSort}
+              activeSortKey={sortKey} isSortReverse={isSortReverse}>
+              Comments
+            </Sort>
           </span>
           <span style={smallColumn}>
-            {item.points}
+            <Sort sortKey={"POINTS"} onSort={this.onSort}
+              activeSortKey={sortKey} isSortReverse={isSortReverse}>
+              Points
+            </Sort>
           </span>
           <span style={smallColumn}>
-            <Button
-              onClick={() => onDismiss(item.objectID)}
-              className="button-inline"
-            >
-              Dismiss
-            </Button>
+            Archive
           </span>
         </div>
-      )}
-    </div>
-  );
-};
+        { reverseSortedList.map(item =>
+          <div key={item.objectID} className="table-row">
+            <span style={largeColumn}>
+              <a href={item.url}>{item.title}</a>
+            </span>
+            <span style={midColumn}>
+              {item.author}
+            </span>
+            <span style={smallColumn}>
+              {item.num_comments}
+            </span>
+            <span style={smallColumn}>
+              {item.points}
+            </span>
+            <span style={smallColumn}>
+              <Button
+                onClick={() => onDismiss(item.objectID)}
+                className="button-inline"
+              >
+                Dismiss
+              </Button>
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  }
+}
 
 Table.propTypes = {
   //list: PropTypes.array.isRequired,
@@ -321,12 +347,13 @@ Table.propTypes = {
       points: PropTypes.number
     })
   ).isRequired,
-  sortKey: PropTypes.string.isRequired,
-  isSortReverse: PropTypes.bool.isRequired,
-  onSort: PropTypes.func.isRequired,
   onDismiss: PropTypes.func.isRequired
 };
 
+// Converting an ES6 class component to a functional stateless component:
+// 1. Replace "class ClassName extends Component" with "function ClassName(props)"
+// 2. Best practice - destructure the props in the function signature
+// 3. Remove "render()"
 const Button = ({ onClick, className, children }) =>
   // A concise body wihout curly braces nor return statement (implicit)
   <button
